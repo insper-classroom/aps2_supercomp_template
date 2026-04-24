@@ -19,3 +19,11 @@ Estes arquivos devem ser editados para que você consiga fazer uma submissão ao
 
 - `aps_batch_s.slurm`: Destinado ao **Cluster Santos Dumont**.
 - `aps_batch_f.slurm`: Destinado ao **Cluster Franky**.
+
+---
+
+## Relatório
+
+Dentro da pasta relatório você encontrará um `.ipynb` vazio, Seu relatório deverá ser nesse formato. 
+
+Fique a vontade para criar pastas e arquivos auxiliares dentro desta pasta para a produção de suas análises. 
