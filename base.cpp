@@ -5,8 +5,8 @@
 #include <iostream>
 #include <memory>
 #include <random>
-#include <sstream>
 #include <string>
+#include "base.hpp"
 
 //----------------------------------------------------------------------------
 // Calcula a volatilidade a partir do arquivo data.csv
@@ -15,7 +15,7 @@ float calculateVolatility(float spotPrice, int32_t timeSteps)
 {
     // Abre o arquivo data.csv em modo de leitura, encerra em caso de falha
     std::ifstream filePtr;
-    filePtr.open("nvidia_stock_close_only.txt", std::ifstream::in);
+    filePtr.open("nvidia_stock.txt", std::ifstream::in);
     
     if (!filePtr.is_open())
     {
@@ -124,29 +124,6 @@ float* runBlackScholesModel(float spotPrice, int32_t timeSteps, float riskRate, 
     return stockPrice;
 }
 
-/* ============================================================================
-   APLICAÇÃO DO MÉTODO DE MONTE CARLO
-   ----------------------------------
-   O Método de Monte Carlo utiliza amostragens aleatórias massivas para modelar
-   sistemas complexos (que não possuem uma solução exata simples) e estimar os
-   seus resultados através de probabilidade. 
-   
-   Neste código, ele é aplicado da seguinte forma:
-   1. Aleatoriedade (Caminhos): O modelo gera múltiplos cenários ou "caminhos" 
-      possíveis para o preço da ação ao longo do tempo usando a equação estocástica 
-      de Black-Scholes (movimento browniano geométrico), impulsionada pela 
-      função de números aleatórios 'genRand'.
-   2. Repetição: Executamos milhares dessas simulações independentes através de 
-      laços de repetição aninhados (controlados por 'inLoops' e 'outLoops').
-   3. Agregação: Ao final, calculamos a média (find2dMean) de todos esses caminhos
-      simulados. Pela Lei dos Grandes Números, a média destas simulações converge 
-      para o valor esperado ou o "resultado mais provável" do comportamento da 
-      ação ao longo do tempo em um mercado volátil.
-============================================================================ */
-
-//----------------------------------------------------------------------------
-// Função Principal
-//----------------------------------------------------------------------------
 void displayHelp(char* programName) {
     std::cout << "\n========================================================================\n";
     std::cout << "   SIMULADOR DE MONTE CARLO - MODELO BLACK-SCHOLES (NVIDIA PREDICT)\n";
@@ -172,40 +149,32 @@ void displayHelp(char* programName) {
     std::cout << "========================================================================\n\n";
 }
 
-int32_t main(int32_t argc, char** argv)
-{
-    static int32_t inLoops = 100;     // Iterações do laço interno
-    static int32_t outLoops = 10000;  // Iterações do laço externo
-    static int32_t timeStepsHistory = 180;   // Intervalos de tempo do mercado de ações (dias)
-    static int32_t timeStepsForecast = 180;   // Intervalos de tempo do mercado de ações (dias)
-    static float spotPrice = 0.50f;  // Preço à vista (spot price em t = 0)
-    static float riskRate = 0.5;   // Taxa de juros livre de risco (%)
+/* ============================================================================
+   APLICAÇÃO DO MÉTODO DE MONTE CARLO
+   ----------------------------------
+   O Método de Monte Carlo utiliza amostragens aleatórias massivas para modelar
+   sistemas complexos (que não possuem uma solução exata simples) e estimar os
+   seus resultados através de probabilidade. 
+   
+   Neste código, ele é aplicado da seguinte forma:
+   1. Aleatoriedade (Caminhos): O modelo gera múltiplos cenários ou "caminhos" 
+      possíveis para o preço da ação ao longo do tempo usando a equação estocástica 
+      de Black-Scholes (movimento browniano geométrico), impulsionada pela 
+      função de números aleatórios 'genRand'.
+   2. Repetição: Executamos milhares dessas simulações independentes através de 
+      laços de repetição aninhados (controlados por 'inLoops' e 'outLoops').
+   3. Agregação: Ao final, calculamos a média (find2dMean) de todos esses caminhos
+      simulados. Pela Lei dos Grandes Números, a média destas simulações converge 
+      para o valor esperado ou o "resultado mais provável" do comportamento da 
+      ação ao longo do tempo em um mercado volátil.
+============================================================================ */
 
-    if ( (argc >= 7 ) || (argc > 1 && argc < 6) ){
-	displayHelp(argv[0]);
-        return 0;
-    }
-		 
+//----------------------------------------------------------------------------
+// Função Principal
+//----------------------------------------------------------------------------
+int32_t run(int32_t inLoops, int32_t outLoops, int32_t timeStepsHistory, 
+         int32_t timeStepsForecast, float_t spotPrice, float_t riskRate){
 
-    if (argc > 1) inLoops = std::stoi(argv[1]);
-    if (argc > 2) outLoops = std::stoi(argv[2]);
-    if (argc > 3) timeStepsHistory = std::stoi(argv[3]);
-    if (argc > 4) timeStepsForecast = std::stoi(argv[4]);
-    if (argc > 5) spotPrice = std::stof(argv[5]);
-    if (argc > 6) riskRate = std::stof(argv[6]);
-
-    // Mostrando o que a fábrica vai usar
-    std::cout << "--- Configurações da Simulação ---" << "\n";
-    std::cout << "Laços Internos: " << inLoops << "\n";
-    std::cout << "Laços Externos: " << outLoops << "\n";
-    std::cout << "Histórico (dias): " << timeStepsHistory << "\n";
-    std::cout << "Previsão (dias): " << timeStepsForecast << "\n";
-    std::cout << "Preço Inicial: " << spotPrice << "\n";
-    std::cout << "Taxa de Risco: " << riskRate << "\n";
-    std::cout << "----------------------------------" << "\n";
-
-
-    const auto beginTime = std::chrono::system_clock::now();
     // Matriz para vetores de preço da ação por iteração
     float** stock = new float* [inLoops];
     for (int32_t i = 0; i < inLoops; i++)
@@ -220,10 +189,12 @@ int32_t main(int32_t argc, char** argv)
     const float volatility = calculateVolatility(spotPrice, timeStepsHistory);
 
     // Mensagem de boas-vindas
+#ifndef TESTING
     std::cout << "Usando volatilidade de mercado: " << volatility << "\n";
 
     std::cout << "Executando em modo Single Thread\n\n";
     std::cout << "Tenha paciência! Calculando.. ";
+#endif
 
     // Laço de simulação externo
     for (int32_t i = 0; i < outLoops; i++)
@@ -256,7 +227,7 @@ int32_t main(int32_t argc, char** argv)
     if (!filePtr.is_open())
     {
         std::cerr << "Não foi possível abrir opt.csv! Encerrando..\n";
-        return EXIT_FAILURE;
+        return -100;
     }
 
     for (int32_t i = 0; i < timeStepsForecast; i++)
@@ -273,8 +244,61 @@ int32_t main(int32_t argc, char** argv)
     delete[] avgStock;
 
     delete[] optStock;
+    
+    return EXIT_SUCCESS;
+}
 
-    std::cout << "concluído!\nTempo gasto: " << std::to_string(std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - beginTime).count()) << "s";
+int32_t timed_run(int32_t inLoops, int32_t outLoops, int32_t timeStepsHistory, 
+         int32_t timeStepsForecast, float_t spotPrice, float_t riskRate){
+    const auto beginTime = std::chrono::steady_clock::now();
+
+    if(run(inLoops, outLoops, timeStepsHistory, timeStepsForecast, spotPrice, riskRate)){
+        return -1;
+    }
+
+    const auto endTime = std::chrono::steady_clock::now();
+    const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - beginTime).count();
+    return elapsed;
+}
+
+#ifndef TESTING
+int32_t main(int32_t argc, char** argv)
+{
+    static int32_t inLoops = 100;           // Iterações do laço interno
+    static int32_t outLoops = 10000;        // Iterações do laço externo
+    static int32_t timeStepsHistory = 180;  // Intervalos de tempo do mercado de ações (dias)
+    static int32_t timeStepsForecast = 180; // Intervalos de tempo do mercado de ações (dias)
+    static float_t spotPrice = 0.50f;       // Preço à vista (spot price em t = 0)
+    static float_t riskRate = 0.5;          // Taxa de juros livre de risco (%)
+
+    if ( (argc != 1 ) && ( argc != 7 )){
+        displayHelp(argv[0]);
+        return 0;
+    }
+
+    inLoops = std::stoi(argv[1]);
+    outLoops = std::stoi(argv[2]);
+    timeStepsHistory = std::stoi(argv[3]);
+    timeStepsForecast = std::stoi(argv[4]);
+    spotPrice = std::stof(argv[5]);
+    riskRate = std::stof(argv[6]);
+
+    std::cout << "--- Configurações da Simulação ---" << "\n";
+    std::cout << "Laços Internos: " << inLoops << "\n";
+    std::cout << "Laços Externos: " << outLoops << "\n";
+    std::cout << "Histórico (dias): " << timeStepsHistory << "\n";
+    std::cout << "Previsão (dias): " << timeStepsForecast << "\n";
+    std::cout << "Preço Inicial: " << spotPrice << "\n";
+    std::cout << "Taxa de Risco: " << riskRate << "\n";
+    std::cout << "----------------------------------" << "\n";
+
+
+    int32_t elapsed = timed_run(inLoops, outLoops, timeStepsHistory, timeStepsForecast, spotPrice, riskRate);
+
+    std::cout << "Executado em " << elapsed << " s\n";
+
+
     return std::getchar();
 }
+#endif
 
